@@ -5,7 +5,6 @@ from cassis.typesystem import Type
 from typing import List
 from features import uima
 from collections import OrderedDict
-import math
 
 class AlignmentLabel(Enum):
     LC_TOKEN = auto()
@@ -70,7 +69,7 @@ class Outcome(FeatureExtractor):
             try:
                 outcome = float(score)
             except ValueError:
-                outcome = math.nan
+                outcome = None
             return ("Outcome", outcome)
             #todo:changed this to float()   File "/home/akrnshva/git/isaac-ml-service/features/extractor.py", line 69, in extract
             # return ("Outcome", int(answer.contentScore))
