@@ -1,0 +1,3 @@
+dkpro-cassis
+pydantic
+pandas
