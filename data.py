@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
 class ShortAnswerInstance(BaseModel):
     taskId: str
@@ -8,3 +8,4 @@ class ShortAnswerInstance(BaseModel):
     itemTargets: List[str]
     learnerId: str
     answer: str
+    label: Optional[str]
