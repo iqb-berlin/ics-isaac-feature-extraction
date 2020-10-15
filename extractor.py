@@ -69,11 +69,8 @@ class Outcome(FeatureExtractor):
             try:
                 outcome = float(score)
             except ValueError:
-                outcome = None
+                outcome = float('nan')
             return ("Outcome", outcome)
-            #todo:changed this to float()   File "/home/akrnshva/git/isaac-ml-service/features/extractor.py", line 69, in extract
-            # return ("Outcome", int(answer.contentScore))
-            # ValueError: invalid literal for int() with base 10: '-98.0'
 
 class Diagnosis(FeatureExtractor):
     
