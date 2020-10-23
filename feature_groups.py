@@ -1,6 +1,6 @@
 from abc import ABC,abstractmethod
 from pandas import DataFrame
-from data import ShortAnswerInstance
+from .data import ShortAnswerInstance
 from typing import List
 
 class FeatureGroupExtractor(ABC):
