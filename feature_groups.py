@@ -5,8 +5,7 @@ from typing import List
 import re
 import textdistance as td
 import pandas as pd
-
-# IQB_BOW_SIM_COLUMNS = {'studentAnswer':'value.raw', 'targetAnswer':'targets'}
+import sys
 
 TARGET_DELIMS_PATTERN = re.compile('|'.join(map(re.escape, ["•", "ODER", " / "])))
 MEASURES = [
@@ -23,14 +22,65 @@ MEASURES = [
 simCache = {}
 
 
-IQB_BOW_SIM_COLUMNS = {'studentAnswer':'value.raw', 'targetAnswer':'targets'}
-
-
 
 class FeatureGroupExtractor(ABC):
     @abstractmethod
     def extract(self, instances: List[ShortAnswerInstance]) -> DataFrame:
         return DataFrame()
+
+
+class SIMGroupExtractor(FeatureGroupExtractor):
+
+    def extract(self, instances: List[ShortAnswerInstance]) -> DataFrame:
+        # extract student and target answers from ShortAnswerInstances
+        st_tgt_answers = [(x.answer, x.itemTargets[0]) for x in
+                          instances]  # TODO: what to do if there are several target sentences?
+        ids = [x.taskId + '_' + x.itemId + '_' + x.learnerId for x in
+               instances]  # TODO: add answer ID? taskId_itemId_learnerId ?
+        # TODO: there are no learner IDs in the test file
+
+        d = pd.DataFrame([self.similarity_features(r, t, MEASURES) for r, t in st_tgt_answers],
+                         columns=[type(i).__name__ for i in MEASURES])
+        d['ID'] = ids
+
+        d.to_csv("testing/sim_test.tsv", sep='\t', encoding='utf8', index=False)
+        print("Saved sim features to testing/sim_test.tsv")
+
+        return d
+
+    def extract_sim_per_instance(self):
+        pass
+
+    def get_target_alternatives(self, targetstr):
+        return TARGET_DELIMS_PATTERN.split(targetstr)
+
+    def sim_lookup_str(self, response, a, m):
+        return response + "  " + a + " | " + type(m).__name__
+
+    def similarity_features(self, response, target, measures):
+        target = str(target)
+        response = str(response)
+        resultScores = []
+        alternatives = self.get_target_alternatives(target)
+
+        for m in measures:
+            max_sim = -1.0
+            for a in alternatives:
+                a = str(a)
+                try:
+                    lookup = self.sim_lookup_str(response, a, m)
+                    simCache.setdefault(lookup, m.normalized_similarity(response, a))
+                    sim = simCache[lookup]
+                    if sim > max_sim:
+                        max_sim = sim
+                except:
+                    # this should only happen for German answers and phonetic distance measures
+                    print("Error with measure", m, "on strings '", response, "' and '", a, "'", file=sys.stderr)
+
+            resultScores.append(max_sim)
+
+        return resultScores
+
 
 class BOWGroupExtractor(FeatureGroupExtractor):
     def extract(self, instances: List[ShortAnswerInstance]) -> DataFrame:
@@ -71,49 +121,3 @@ class BOWGroupExtractor(FeatureGroupExtractor):
 
 
 
-
-
-class SIMGroupExtractor(FeatureGroupExtractor):
-
-    def extract(self, instances: List[ShortAnswerInstance]) -> DataFrame:
-        # add implementation
-
-        # Copied over from isaac-data-analysis
-        d = pd.DataFrame([self.similarity_features(r, t, MEASURES) for r, t in zip(datafr[columns_to_be_used['studentAnswer']],
-        datafr[columns_to_be_used['targetAnswer']])], columns=[type(i).__name__ for i in MEASURES])
-        d['ID'] = datafr['ID']
-
-        pass
-
-    def extract_sim_per_instance(self):
-        pass
-
-    def get_target_alternatives(self, targetstr):
-        return TARGET_DELIMS_PATTERN.split(targetstr)
-
-    def sim_lookup_str(self, response, a, m):
-        return response + "  " + a + " | " + type(m).__name__
-
-    def similarity_features(self, response, target, measures):
-        target = str(target)
-        response = str(response)
-        resultScores = []
-        alternatives = get_target_alternatives(target)
-
-        for m in measures:
-            max_sim = -1.0
-            for a in alternatives:
-                a = str(a)
-                try:
-                    lookup = sim_lookup_str(response, a, m)
-                    simCache.setdefault(lookup, m.normalized_similarity(response, a))
-                    sim = simCache[lookup]
-                    if sim > max_sim:
-                        max_sim = sim
-                except:
-                    # this should only happen for German answers and phonetic distance measures
-                    print("Error with measure", m, "on strings '", response, "' and '", a, "'", file=sys.stderr)
-
-            resultScores.append(max_sim)
-
-        return resultScores
