@@ -1,5 +1,0 @@
-taskId  itemId  itemPrompt  itemTargets learnerId   answer  label
-ID1 EF123   What is the capital of Germany? Berlin  XYZ01   Berlin  1.0
-ID1 AB123   What is the capital of Germany? Berlin  ABC234    Burlin    0.0
-ID2 AB123   What does she like doing?   She likes playing chess.  XYZ01   playing chess   1.0
-ID2 AB123   What does she like doing?   She likes playing chess.    ABC234    She likes play chess    1.0
