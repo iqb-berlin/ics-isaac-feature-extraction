@@ -1,11 +1,19 @@
 from abc import ABC,abstractmethod
 from pandas import DataFrame
-from data import ShortAnswerInstance
 from typing import List
+import os
 import re
 import textdistance as td
 import pandas as pd
 import sys
+
+# The import must be relative if script is called from ML service
+ROOT_DIR = os.path.abspath(os.curdir)
+if ROOT_DIR.endswith("isaac-ml-service"):
+    from .data import ShortAnswerInstance
+else:
+    from data import ShortAnswerInstance
+
 
 TARGET_DELIMS_PATTERN = re.compile('|'.join(map(re.escape, ["•", "ODER", " / "])))
 MEASURES = [
@@ -43,7 +51,11 @@ class SIMGroupExtractor(FeatureGroupExtractor):
                          columns=[type(i).__name__ for i in MEASURES])
         d['ID'] = ids
 
-        d.to_csv("testing/sim_test.tsv", sep='\t', encoding='utf8', index=False)
+        sim_test_path = "testing/sim_test.tsv"
+        if ROOT_DIR.endswith("isaac-ml-service"):
+            sim_test_path = os.path.join("features", sim_test_path)
+
+        d.to_csv(sim_test_path, sep='\t', encoding='utf8', index=False)
         print("Saved sim features to testing/sim_test.tsv")
 
         return d
