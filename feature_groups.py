@@ -51,12 +51,10 @@ class SIMGroupExtractor(FeatureGroupExtractor):
         """
 
         # extract student and target answers from ShortAnswerInstances
-        st_tgt_answers = [(x.answer, x.itemTargets[0]) for x in instances]        # TODO: what to do if there are several target sentences?
-        d = pd.DataFrame([self.similarity_features(r, t, MEASURES) for r, t in st_tgt_answers],
+        st_tgt_answers = [(x.answer, x.itemTargets) for x in instances]
+        return pd.DataFrame([self.similarity_features(r, t, MEASURES) for r, t in st_tgt_answers],
                          columns=[type(i).__name__ for i in MEASURES])
-        d['ID'] = [x.taskId + '_' + x.itemId + '_' + x.learnerId for x in instances] # TODO: add answer ID? taskId_itemId_learnerId ?
-                                                                                  # TODO: there are no learner IDs in the test file
-        return d
+
 
     def get_target_alternatives(self, targetstr):
         return TARGET_DELIMS_PATTERN.split(targetstr)
@@ -64,11 +62,10 @@ class SIMGroupExtractor(FeatureGroupExtractor):
     def sim_lookup_str(self, response, a, m):
         return response + "  " + a + " | " + type(m).__name__
 
-    def similarity_features(self, response, target, measures):
-        target = str(target)
+    def similarity_features(self, response, targets, measures):
         response = str(response)
         resultScores = []
-        alternatives = self.get_target_alternatives(target)
+        alternatives = self.get_target_alternatives(targets)
 
         for m in measures:
             max_sim = -1.0
@@ -112,10 +109,7 @@ class BOWGroupExtractor(FeatureGroupExtractor):
         """
         # extract student answers & bow features for them
         bow_feats = self.bow_features([x.answer for x in instances])
-        dfr = pd.DataFrame(bow_feats, columns=self.bag)
-        dfr['ID'] = [x.taskId + '_' + x.itemId + '_' + x.learnerId for x in instances] # TODO: add answer ID? taskId_itemId_learnerId ?
-                                                                                       # TODO: there are no learner IDs in the test file
-        return dfr
+        return pd.DataFrame(bow_feats, columns=self.bag)
 
 
     def train_bag(self, text, n=500):
@@ -135,10 +129,6 @@ class BOWGroupExtractor(FeatureGroupExtractor):
 
     def bow_features(self, instances):
         return [self.bag_representation(x) for x in instances]  #TODO: remove instances["value.raw"]
-
-    # TODO: is this method still needed?
-    def bag_count_representation(self, bag, text):
-        return [float(len(re.findall(w, text))) for w in bag]
 
 
 

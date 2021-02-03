@@ -1,6 +1,7 @@
 from feature_groups import *
 from data import ShortAnswerInstance
 import argparse
+import time
 
 # TODO: I am using 'learnerId':'answerID', because there are no learner IDs in the test file
 header = {'taskId':'subTask','itemId':'taskField','itemPrompt':'prompt','itemTargets':'target','learnerId':'answerID','answer':'answer', 'label':'correct'}
@@ -24,12 +25,18 @@ def create_short_answer_instances(datafr:pd.DataFrame):
         sh_ans_inst.append(d)
     return sh_ans_inst
 
+
+def compute_elapsed_time(elapsed_time_sec):
+    return "{}:{:>02}:{:>05.2f}".format(int(elapsed_time_sec / 3600), int((elapsed_time_sec % 3600) / 60),
+                                        elapsed_time_sec % 60)
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Test feature extraction')
     parser.add_argument('train', type=str, help='file containing short answer training data')
     parser.add_argument('test', type=str, help='file containing short answer test data')
     args = parser.parse_args()
 
+    s = time.time()
     train_data = parse_instances(args.train)
     data_as_instances = []
     cols = train_data.columns
@@ -40,7 +47,8 @@ if __name__ == '__main__':
     # extract sim features
     sim_extractor = SIMGroupExtractor()
     d = sim_extractor.extract(train_data_instances)
-
+    e = time.time()
+    print("Sim extractor runtime: ", compute_elapsed_time(e-s))
     # train bow bag on TRAINING data
     bow_extractor = BOWGroupExtractor(train_data_instances)        # the bag is trained in the constructor
 
