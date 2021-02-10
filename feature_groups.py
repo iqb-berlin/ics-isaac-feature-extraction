@@ -32,36 +32,37 @@ simCache = {}
 
 
 class FeatureGroupExtractor(ABC):
+    """
+        An abstract class providing for FeatureGroupExtractors.
+        Subclasses have to implement the extract() method
+    """
     @abstractmethod
     def extract(self, instances: List[ShortAnswerInstance]) -> DataFrame:
         return DataFrame()
 
 
 class SIMGroupExtractor(FeatureGroupExtractor):
+    """
+        A subclass of FeatureGroupExtractor which provides a method
+        to compute similarity values (see the MEASURES variable) between
+        "answer" and "itemTargets" and store them as features in a pandas DataFrame.
+        For identification purposes, "learnerId" of each ShortAnswerInstance will be stored
+        as a separate column ('ID').
+    """
 
     def extract(self, instances: List[ShortAnswerInstance]) -> DataFrame:
+        """
+            Computes similarity values (see the MEASURES variable) between
+        "answer" and "itemTargets" and stores them as features in a pandas DataFrame
+        :param instances: a list of ShortAnswerInstances
+        :return: a pd.DataFrame with similarity features + the learner ID for each ShortAnswerInstance
+        """
+
         # extract student and target answers from ShortAnswerInstances
-        st_tgt_answers = [(x.answer, x.itemTargets[0]) for x in
-                          instances]  # TODO: what to do if there are several target sentences?
-        ids = [x.taskId + '_' + x.itemId + '_' + x.learnerId for x in
-               instances]  # TODO: add answer ID? taskId_itemId_learnerId ?
-        # TODO: there are no learner IDs in the test file
-
-        d = pd.DataFrame([self.similarity_features(r, t, MEASURES) for r, t in st_tgt_answers],
+        st_tgt_answers = [(x.answer, x.itemTargets) for x in instances]
+        return pd.DataFrame([self.similarity_features(r, t, MEASURES) for r, t in st_tgt_answers],
                          columns=[type(i).__name__ for i in MEASURES])
-        d['ID'] = ids
 
-        sim_test_path = "testing/sim_test.tsv"
-        if ROOT_DIR.endswith("isaac-ml-service"):
-            sim_test_path = os.path.join("features", sim_test_path)
-
-        d.to_csv(sim_test_path, sep='\t', encoding='utf8', index=False)
-        print("Saved sim features to testing/sim_test.tsv")
-
-        return d
-
-    def extract_sim_per_instance(self):
-        pass
 
     def get_target_alternatives(self, targetstr):
         return TARGET_DELIMS_PATTERN.split(targetstr)
@@ -69,11 +70,10 @@ class SIMGroupExtractor(FeatureGroupExtractor):
     def sim_lookup_str(self, response, a, m):
         return response + "  " + a + " | " + type(m).__name__
 
-    def similarity_features(self, response, target, measures):
-        target = str(target)
+    def similarity_features(self, response, targets, measures):
         response = str(response)
         resultScores = []
-        alternatives = self.get_target_alternatives(target)
+        alternatives = self.get_target_alternatives(targets)
 
         for m in measures:
             max_sim = -1.0
@@ -95,16 +95,31 @@ class SIMGroupExtractor(FeatureGroupExtractor):
 
 
 class BOWGroupExtractor(FeatureGroupExtractor):
-    def extract(self, instances: List[ShortAnswerInstance]) -> DataFrame:
-        # add implementation
-        """
-        Copied over from isaac-data-analysis
-        bag = train_bag(" ".join(datafr[columns_to_be_used['studentAnswer']]), 500)
-        d = pd.DataFrame(bow_features(bag, datafr), columns=bag)
-        d['ID'] = datafr['ID']"""
-        pass
+    """
+        A subclass of GroupFeatureExtractor which extracts bag of words features from
+        a list of ShortAnswerInstances and stores them as features in a pandas DataFrame.
+        For identification purposes, "learnerId" of each ShortAnswerInstance will be stored
+        as a separate column ('ID').
+        *** IMPORTANT ***: when instantiating the class, a list of ShortAnswerInstances has to be passed
+                   in order for the bag of words to be trained. Subsequent calls to
+                   extract() will return features which will be computed based on the trained bag.
 
-    # train on all instances passed?
+    """
+    def __init__(self, instances: List[ShortAnswerInstance]):
+        self.bag = self.train_bag(" ".join([x.answer for x in instances]))      # trains the bag
+
+
+    def extract(self, instances: List[ShortAnswerInstance]) -> DataFrame:
+        """
+            Extract BOW features from a list of ShortAnswerInstances.
+        :param instances: a list of ShortAnswerInstances
+        :return: a pd.DataFrame with BOW features + the learner ID for each ShortAnswerInstance
+        """
+        # extract student answers & bow features for them
+        bow_feats = self.bow_features([x.answer for x in instances])
+        return pd.DataFrame(bow_feats, columns=self.bag)
+
+
     def train_bag(self, text, n=500):
         words = [w for w in text.lower().split(" ") if w]
         word_counts = {}
@@ -116,17 +131,12 @@ class BOWGroupExtractor(FeatureGroupExtractor):
         sorted_words = sorted(word_counts.keys(), key=lambda x: word_counts[x], reverse=True)
         return sorted_words[:n]
 
-    def bag_representation(self,bag, text):
+    def bag_representation(self, text):
         text = set(map(lambda w: w.lower(), text.split()))
-        return [float(w in text) for w in
-                bag]  # todo: CREATES AN INCORRECT REPRESENTATION because .lower() was not used!!!
+        return [float(w in text) for w in self.bag]
 
-    def bow_features(self, bag, instances):
-        return [self.bag_representation(bag, x) for x in instances["value.raw"]] # TODO: change "value.raw"
-
-    # TODO: is this method still needed?
-    def bag_count_representation(self, bag, text):
-        return [float(len(re.findall(w, text))) for w in bag]
+    def bow_features(self, instances):
+        return [self.bag_representation(x) for x in instances]  #TODO: remove instances["value.raw"]
 
 
 
