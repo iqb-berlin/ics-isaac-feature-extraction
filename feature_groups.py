@@ -64,20 +64,17 @@ class SIMGroupExtractor(FeatureGroupExtractor):
                          columns=[type(i).__name__ for i in MEASURES])
 
 
-    def get_target_alternatives(self, targetstr):
-        return TARGET_DELIMS_PATTERN.split(targetstr)
-
     def sim_lookup_str(self, response, a, m):
         return response + "  " + a + " | " + type(m).__name__
 
     def similarity_features(self, response, targets, measures):
+
         response = str(response)
         resultScores = []
-        alternatives = self.get_target_alternatives(targets)
 
         for m in measures:
             max_sim = -1.0
-            for a in alternatives:
+            for a in targets:
                 a = str(a)
                 try:
                     lookup = self.sim_lookup_str(response, a, m)
@@ -136,7 +133,7 @@ class BOWGroupExtractor(FeatureGroupExtractor):
         return [float(w in text) for w in self.bag]
 
     def bow_features(self, instances):
-        return [self.bag_representation(x) for x in instances]  #TODO: remove instances["value.raw"]
+        return [self.bag_representation(x) for x in instances]
 
 
 
