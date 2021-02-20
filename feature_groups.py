@@ -42,7 +42,7 @@ class SIMGroupExtractor(FeatureGroupExtractor):
         as a separate column ('ID').
     """
 
-    def extract(self, instances: List[ShortAnswerInstance]) -> DataFrame:
+    def extract(self, instances: List[ShortAnswerInstance], reference='answer', compar='itemTargets') -> DataFrame:
         """
             Computes similarity values (see the MEASURES variable) between
         "answer" and "itemTargets" and stores them as features in a pandas DataFrame
@@ -54,7 +54,6 @@ class SIMGroupExtractor(FeatureGroupExtractor):
         st_tgt_answers = [(x.answer, x.itemTargets) for x in instances]
         return pd.DataFrame([self.similarity_features(r, t, MEASURES) for r, t in st_tgt_answers],
                          columns=[type(i).__name__ for i in MEASURES])
-
 
     def sim_lookup_str(self, response, a, m):
         return response + "  " + a + " | " + type(m).__name__
