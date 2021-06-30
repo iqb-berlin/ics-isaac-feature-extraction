@@ -7,12 +7,12 @@ import textdistance as td
 import pandas as pd
 import sys
 
-# The import must be relative if script is called from ML service
+# The import must be relative if script is called from elsewhere
 ROOT_DIR = os.path.abspath(os.curdir)
-if ROOT_DIR.endswith("isaac-ml-service"):
-    from .data import ShortAnswerInstance
-else:
+if os.path.isfile(ROOT_DIR + "/feature_groups.py"):
     from data import ShortAnswerInstance
+else:
+    from .data import ShortAnswerInstance
 
 
 TARGET_DELIMS_PATTERN = re.compile('|'.join(map(re.escape, ["•", "ODER", " / "])))
